@@ -1,0 +1,70 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+
+' ГРАНИЦА СИСТЕМЫ
+System_Boundary(prop, "PropDevelopment") {
+  ' КЛИЕНТЫ
+  Container(mobile, "Витрина сервисов для собственников (Mobile App)", "iOS/Android", "UI. Управление услугами, просмотр событий домофона/шлагбаума")
+  Container_Boundary(srv, "Backend сервисы") {
+    Container(tenant, "tenant-core-app", "Kotlin/Spring Boot", "Сервисы для собственников: доступы, заявки, интеграции")
+    Container(crmOwners, "CRM собственников", "Kotlin/Spring Boot", "Учет владельцев, разрешения доступа")
+    ContainerDb(crmOwnersDb, "crm-tenant-db", "PostgreSQL", "Данные собственников/резидентов/прав")
+    Container(mart, "client-mart-app", "Kotlin/Spring Boot", "Информация об объектах, онлайн-сделки")
+    ContainerDb(martDb, "client-mart-db", "PostgreSQL", "Объекты/сделки")
+    Container(martEstate, "client-mart-estate-app", "Kotlin/Spring Boot", "Управление данными объектов")
+    ContainerDb(martEstateDb, "client-mart-estate-db", "PostgreSQL", "Фонд недвижимости")
+    Container(dwh, "Хранилище данных (DWH)", "Greenplum/S3", "CDC загрузка сырых данных, отчётность/BI")
+    Container(auth, "auth-service-1 (IdP)", "Keycloak", "OIDC/OAuth2.1 для мобильных пользователей")
+    Container(ad, "Active Directory", "MS AD", "Каталоги/группы для внутренних систем")
+  }
+
+  ' ДОБАВЛЕННЫЕ КОНТЕЙНЕРЫ ДЛЯ ИНТЕГРАЦИИ С ПАРТНЕРОМ
+  Container_Boundary(integ, "Интеграционный контур «Умный дом»") {
+    Container(edge, "SmartHome Integration Gateway", "Kotlin/Spring Boot", "Шлюз к платформе «Умный дом»: маршрутизация, трансформация, валидация")
+    Container(webhooks, "SmartHome Webhook Receiver", "Kotlin/Spring Boot", "Приём внешних событий (домофон/шлагбаум), верификация подписи, идемпотентность")
+    ContainerQueue(bus, "Event Bus", "Kafka (или NATS)", "Асинхронные события: распознавание, статусы, команды")
+    Container(secrets, "KMS/Secrets", "Vault/KMS", "Хранение ключей/секретов/клиентских сертификатов")
+  }
+}
+
+' ВНЕШНИЕ СИСТЕМЫ
+System_Ext(partner, "Платформа партнёра «Умный дом»", "Распознавание лиц/номеров, управление домофоном/шлагбаумом")
+System_Ext(pay, "Платежная система", "Оплата услуг")
+System_Ext(uk, "Системы управляющих компаний", "ЖКУ")
+
+' СВЯЗИ — СУЩЕСТВУЮЩИЕ
+Rel(mobile, auth, "Аутентификация/Авторизация", "OIDC")
+Rel(mobile, tenant, "API запросы", "HTTPS/REST")
+Rel(tenant, crmOwners, "Справочники прав/роли резидентов", "REST/JDBC")
+Rel(crmOwners, crmOwnersDb, "Чтение/запись", "JDBC")
+Rel(mart, martDb, "Чтение/запись", "JDBC")
+Rel(martEstate, martEstateDb, "Чтение/запись", "JDBC")
+Rel(tenant, uk, "Интеграции по ЖКУ", "HTTPS/REST")
+Rel(mobile, pay, "Платежи", "HTTPS/REST")
+Rel(dwh, martDb, "CDC из приложений", "CDC")
+Rel(dwh, martEstateDb, "CDC из приложений", "CDC")
+Rel(dwh, crmOwnersDb, "CDC из приложений", "CDC")
+
+' СВЯЗИ — НОВЫЕ ДЛЯ «УМНОГО ДОМА»
+Rel(tenant, edge, "Команды: открыть/закрыть, управление доступами", "HTTPS/mTLS + OAuth2 CC")
+Rel(edge, partner, "API партнёра: команды и статусы", "HTTPS/mTLS + OAuth2 CC, версии API")
+Rel(partner, webhooks, "События: лицо/номер распознан, статус выполнения", "Webhook HTTPS + подпись (HMAC/JWT)")
+Rel(webhooks, bus, "Публикация событий", "Async")
+Rel(bus, tenant, "Потребление событий", "Async")
+Rel(edge, secrets, "Чтение секретов/сертификатов", "mTLS")
+Rel(webhooks, secrets, "Проверка подписи (секрет/ключ)", "локально")
+
+' МОБИЛЬНЫЕ ПОТОКИ
+Rel(mobile, tenant, "Вкл/Выкл автодоступ, просмотр истории, управление гостевыми пропусками", "HTTPS/REST")
+Rel(tenant, crmOwnersDb, "Проверка прав резидента/машины/гостя", "JDBC")
+
+' СТИЛИ
+UpdateElementStyle(partner, $bgColor="#8C8496", $fontColor="white")
+UpdateElementStyle(edge, $bgColor="#2E7D32", $fontColor="white")
+UpdateElementStyle(webhooks, $bgColor="#2E7D32", $fontColor="white")
+UpdateElementStyle(bus, $bgColor="#546E7A", $fontColor="white")
+UpdateElementStyle(secrets, $bgColor="#6A1B9A", $fontColor="white")
+
+SHOW_LEGEND()
+@enduml
