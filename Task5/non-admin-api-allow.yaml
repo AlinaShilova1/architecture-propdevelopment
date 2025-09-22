@@ -1,0 +1,94 @@
+# 1) Глобальный default-deny для входящего трафика в ns "app"
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: app
+spec:
+  podSelector: {}         # все поды в namespace
+  policyTypes:
+    - Ingress
+
+---
+# 2) Разрешить ВХОД с front-end -> back-end-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-fe-to-be
+  namespace: app
+spec:
+  podSelector:
+    matchLabels:
+      role: back-end-api   # кому разрешаем вход
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: front-end
+      ports:
+        - protocol: TCP
+          port: 80
+
+---
+# 3) Разрешить ВХОД с back-end-api -> front-end (двусторонняя связка)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-be-to-fe
+  namespace: app
+spec:
+  podSelector:
+    matchLabels:
+      role: front-end
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: back-end-api
+      ports:
+        - protocol: TCP
+          port: 80
+
+---
+# 4) Разрешить ВХОД с admin-front-end -> admin-back-end-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-admin-fe-to-admin-be
+  namespace: app
+spec:
+  podSelector:
+    matchLabels:
+      role: admin-back-end-api
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: admin-front-end
+      ports:
+        - protocol: TCP
+          port: 80
+
+---
+# 5) Разрешить ВХОД с admin-back-end-api -> admin-front-end (двусторонняя связка)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-admin-be-to-admin-fe
+  namespace: app
+spec:
+  podSelector:
+    matchLabels:
+      role: admin-front-end
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: admin-back-end-api
+      ports:
+        - protocol: TCP
+          port: 80
