@@ -1,0 +1,9 @@
+| Роль  | Права роли | Группы пользователей |
+| --- | --- | --- |
+| **cluster-admin** | Полный доступ ко всем ресурсам Kubernetes: создание и удаление namespaces, управление любыми объектами, включая секреты и роли. Встроенная роль Kubernetes. | `cluster-admins` — небольшая группа инженеров, ответственных за платформу и безопасность. |
+| **platform-config** | Управление конфигурацией кластера: создание и настройка namespaces, deployments, statefulsets, daemonsets, jobs, cronjobs, services, ingress, networkpolicies, HPA, storageclasses. **Нет доступа к Secret и RBAC-объектам**. | `platform-admins` — DevOps/платформенная команда, которая отвечает за настройку кластеров и инфраструктуры. |
+| **cluster-viewer** | Только просмотр всех ресурсов (get/list/watch) во всём кластере. **Нет доступа к Secret** и к изменению ресурсов. | `readers` — аудиторы, QA-инженеры, менеджмент, команде безопасности для мониторинга. |
+| **ns-admin** | Полный контроль в рамках конкретного namespace: все ресурсы, включая Secret, но **без управления ClusterRole/ClusterRoleBinding**. | `sales-admins`, `finance-admins`, `utilities-admins`, `data-admins` — админы конкретных отделов по их namespace. |
+| **ns-edit-no-secrets** | Управление приложениями в namespace: pods, deployments, services, configmaps, ingress и другие объекты, **кроме Secret и RBAC**. | `sales-dev`, `finance-dev`, `utilities-dev`, `data-dev` — разработчики и инженеры команд, которые разворачивают свои сервисы. |
+| **ns-view** | Только просмотр ресурсов внутри конкретного namespace (get/list/watch). **Нет доступа к Secret**. | `sales-ro`, `finance-ro`, `utilities-ro`, `data-ro` — команды поддержки, QA, аналитики. |
+| **secrets-reader** | Точечный доступ к Secret внутри определённого namespace. | `security-team`, `sre` — команды, которым нужен доступ к секретам только там, где это согласовано. |
