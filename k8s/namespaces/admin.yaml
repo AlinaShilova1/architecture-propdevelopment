@@ -2,5 +2,3 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: admin-namespace
-  labels:
-    purpose: configuring settings
